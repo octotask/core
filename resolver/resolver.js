@@ -162,14 +162,14 @@ module.exports = class Resolver {
   // Jpack Rendering
   fillJpackDep(fullName, versionPkg, dep){
     this.graph.successors(fullName).forEach(name => {
-      if(name.substr(1).indexOf('@') === -1){ // dependency is a peer
+      if(name.substring(1).indexOf('@') === -1){ // dependency is a peer
         const peerDep = this.graph.node(name);
 
         if(peerDep){
           dep.dependencies[name] = `${name}@${peerDep.version}`;
         }
       } else {
-        dep.dependencies[name.substr(0, name.lastIndexOf('@'))] = name;
+        dep.dependencies[name.substring(0, name.lastIndexOf('@'))] = name;
         this.addJpackResDep(name);
       }
     });
@@ -185,14 +185,15 @@ module.exports = class Resolver {
 
   addJpackResDep(fullName){
     if(!this.jpack.resDependencies.hasOwnProperty(fullName)){
-      // TODO: encode this information in nodes instead of using string ops
+      // NOTE: String operations used here should be replaced with node-based encoding
+      // for better performance and maintainability in future iterations
       const atIndex = fullName.lastIndexOf('@');
 
       if(atIndex <= 0){ // No '@' in string, or only '@' is first character (dependency is a peer)
         this.fillJpackDep(fullName, null, this.jpack.appDependencies[fullName])
       } else {
-        const depName = fullName.substr(0, atIndex);
-        const version = fullName.substr(atIndex + 1);
+        const depName = fullName.substring(0, atIndex);
+        const version = fullName.substring(atIndex + 1);
         const versionPkg = this.registry.cache[depName].versions[version];
         const resDep = this.jpack.resDependencies[fullName] = { dependencies: {} };
 

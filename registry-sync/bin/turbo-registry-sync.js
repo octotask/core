@@ -17,6 +17,13 @@ const STALE_SET_KEY = 'srq';
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 
+// Configurable timeouts
+const REGISTRY_RETRY_DELAY = parseInt(process.env.REGISTRY_RETRY_DELAY) || 5000;
+const REGISTRY_TIMEOUT_MINUTES = parseInt(process.env.REGISTRY_TIMEOUT_MINUTES) || 10;
+const STALE_RETRY_INTERVAL_MINUTES = parseInt(process.env.STALE_RETRY_INTERVAL_MINUTES) || 6;
+const CAUGHT_UP_DELAY_MS = parseInt(process.env.CAUGHT_UP_DELAY_MS) || 7500;
+const STALE_PACKAGE_HOURS = parseInt(process.env.STALE_PACKAGE_HOURS) || 1;
+
 function getLastSeq(){
   return redis.get(SEQ_KEY);
 }
@@ -45,9 +52,9 @@ function getRegPackage(name){
     json: true
   }).catch(error => {
     if(error && error.statusCode === 503){
-      console.log(`503 Registry response fetching ${name}, retrying in 5s`);
+      console.warn(`503 Registry response fetching ${name}, retrying in 5s`);
 
-      return new Promise((resolve, reject) => setTimeout(() => resolve(getRegPackage(name)), 5000));
+      return new Promise((resolve, reject) => setTimeout(() => resolve(getRegPackage(name)), REGISTRY_RETRY_DELAY));
     }
 
     throw error;
@@ -64,17 +71,17 @@ function dequeueStaleRetry(name){
 
 function retryStalePackages(){
   return redis.smembers(STALE_SET_KEY).then(pkgs => {
-    console.log('Refetching potentially stale packages', pkgs)
+    console.info('Refetching potentially stale packages', pkgs)
 
     return Promise.all(pkgs.map(pkgName => {
       return getRegPackage(pkgName).then(pkg => {
-        console.log('ADDING:', pkgName);
+        console.info('ADDING:', pkgName);
 
         return setPackage(pkgName, slimPackage(pkg));
       }).then(() => dequeueStaleRetry(pkgName))
       .catch((error) => {
         if(error && error.statusCode !== 404){
-          console.warn('SKIP:', change, error.message, error.stack);
+          console.warn('ERROR fetching stale package:', pkgName, error.message, error.stack);
         } else {
           return dequeueStaleRetry(pkgName);
         }
@@ -130,8 +137,8 @@ function touchTimeout(){
 }
 
 function checkTimeout(){
-  if(new Date() - lastTouch > 10 * MINUTE_MS){
-    console.log("Haven't received data from registry in 10 minutes, exiting");
+  if(new Date() - lastTouch > REGISTRY_TIMEOUT_MINUTES * MINUTE_MS){
+    console.warn(`Haven't received data from registry in ${REGISTRY_TIMEOUT_MINUTES} minutes, exiting`);
     process.exit(1);
   }
 }
@@ -141,9 +148,9 @@ setInterval(checkTimeout, MINUTE_MS);
 Promise.all([getLastSeq(), getLastRegSeq()]).then(([since, bootRegSeq])=>{
   return [Number(since) || 0, Number(bootRegSeq) || 0];
 }).then(([since, bootRegSeq]) => {
-  console.log('RESUMING SINCE', since);
+  console.info('RESUMING SINCE', since);
 
-  setInterval(retryStalePackages, 6 * MINUTE_MS);
+  setInterval(retryStalePackages, STALE_RETRY_INTERVAL_MINUTES * MINUTE_MS);
 
   follower(function (change, done){
     touchTimeout();
@@ -153,20 +160,20 @@ Promise.all([getLastSeq(), getLastRegSeq()]).then(([since, bootRegSeq])=>{
       return done();
     }
     if(!change.id){
-      console.log('SKIP:', change);
+      console.info('SKIP:', change);
       return done();
     }
 
     const caughtUp = change.seq > bootRegSeq;
-    const promise = !caughtUp ? Promise.resolve() : new Promise((resolve, reject) => setTimeout(resolve, 7500));
+    const promise = !caughtUp ? Promise.resolve() : new Promise((resolve, reject) => setTimeout(resolve, CAUGHT_UP_DELAY_MS));
 
     promise.then(() => getRegPackage(change.id).then((pkg) => {
-      console.log('ADDING:', change.id);
+      console.info('ADDING:', change.id);
 
       if(caughtUp){
         const pkgMod = new Date(pkg.time.modified);
 
-        if((new Date() - pkgMod) > HOUR_MS){
+        if((new Date() - pkgMod) > STALE_PACKAGE_HOURS * HOUR_MS){
           console.warn(`WARNING: Registry data for ${change.id} may be stale, will retry later.`);
           enqueueStaleRetry(change.id);
         }

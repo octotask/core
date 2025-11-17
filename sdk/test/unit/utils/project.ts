@@ -9,7 +9,7 @@ export function getTestProject(project?: Partial<Project>): Project {
   "dependencies": {"cowsay": "1.5.0"}
 }`,
       'index.js': `import cowsay from 'cowsay';
-console.log(cowsay('Hello world!'));
+// Test utility function - cowsay greeting removed for production
 `,
     },
     ...project,

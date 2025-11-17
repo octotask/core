@@ -4,13 +4,18 @@ const Agent = require('agentkeepalive').HttpsAgent;
 const { normalizePath } = require('typescript');
 const parseImports = require('./parseImports');
 
+// Configurable timeout for HTTP requests
+const REQUEST_TIMEOUT = parseInt(process.env.CDN_REQUEST_TIMEOUT) || 60000;
+
 const agent = new Agent({
   maxSockets: 100,
-  timeout: 60000,
-  keepAliveTimeout: 30000
+  maxFreeSockets: 10,
+  timeout: REQUEST_TIMEOUT,
+  freeSocketTimeout: 30000, // 30 seconds
 });
 
-const JSDELIVR_URL = 'https://cdn.jsdelivr.net/npm';
+// Configurable CDN base URL
+const JSDELIVR_URL = process.env.CDN_BASE_URL || 'https://cdn.jsdelivr.net/npm';
 const RESOLVED_EXTENSIONS = ['.js', '.json', '/index.js', '/index.json'];
 
 function fetchUrl(url, buffer = false){
@@ -68,7 +73,7 @@ function fetchChildDependencies(baseUrl, path, fileList, vendorFiles){
     return Promise.all(parseImports(text).map(child => {
       let childPath = normalizePath(`${cwd}${cwd === '' ? '' : '/'}${child}`);
 
-      if(childPath.charAt(0) === '/'){ childPath = childPath.substr(1); }
+      if(childPath.charAt(0) === '/'){ childPath = childPath.substring(1); }
 
       return fetchChildDependencies(baseUrl, childPath, fileList, vendorFiles);
     }))
@@ -76,7 +81,8 @@ function fetchChildDependencies(baseUrl, path, fileList, vendorFiles){
   });
 }
 
-// TODO: Generalize fetchChildDependencies and fetchChildDefinitions into one
+// NOTE: Consider merging fetchChildDependencies and fetchChildDefinitions into a single
+// // function to reduce code duplication and improve maintainability
 // function that takes an additional array of extensions to be resolved
 function fetchChildDefinitions(baseUrl, path, fileList, vendorFiles){
   let resPath, index;
@@ -110,7 +116,7 @@ function fetchChildDefinitions(baseUrl, path, fileList, vendorFiles){
     return Promise.all(parseImports(text).map(child => {
       let childPath = normalizePath(`${cwd}${cwd === '' ? '' : '/'}${child}`);
 
-      if(childPath.charAt(0) === '/'){ childPath = childPath.substr(1); }
+      if(childPath.charAt(0) === '/'){ childPath = childPath.substring(1); }
 
       return fetchChildDefinitions(baseUrl, childPath, fileList, vendorFiles);
     }));
