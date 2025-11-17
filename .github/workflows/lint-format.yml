@@ -26,11 +26,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Install hyperdeploy dependencies
         working-directory: hyperdeploy
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Run ESLint
         run: npx eslint . --ext .ts,.tsx --max-warnings 0
@@ -54,7 +54,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Check formatting with Prettier
         run: npx prettier --check .

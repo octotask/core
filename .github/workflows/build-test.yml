@@ -29,11 +29,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies (root)
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Install dependencies (hyperdeploy)
         working-directory: hyperdeploy
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Build hyperdeploy
         working-directory: hyperdeploy
@@ -41,7 +41,7 @@ jobs:
 
       - name: Install dependencies (cdn)
         working-directory: cdn
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Install dependencies (resolver)
         working-directory: resolver
