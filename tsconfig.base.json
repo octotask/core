@@ -1,0 +1,39 @@
+# TypeScript Configuration for Project Root
+
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "lib": [
+            "ES2020"
+        ],
+        "declaration": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "moduleResolution": "node",
+        "rootDir": ".",
+        "baseUrl": ".",
+        "paths": {
+            "@octotask/*": [
+                "./*"
+            ]
+        }
+    },
+    "include": [
+        "hyperdeploy/src",
+        "cdn",
+        "resolver",
+        "registry-sync",
+        ".github"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "build",
+        "docs",
+        "sdk"
+    ]
+}

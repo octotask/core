@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: octotask-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - octotask
+
+  registry-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: registry-sync
+    container_name: octotask-registry-sync
+    environment:
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - octotask
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  hyperdeploy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: hyperdeploy
+    container_name: octotask-hyperdeploy
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - octotask
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: octotask-dev
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/hyperdeploy/node_modules
+      - /app/cdn/node_modules
+      - /app/resolver/node_modules
+      - /app/registry-sync/node_modules
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - octotask
+    command: npm run dev
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  octotask:
+    driver: bridge

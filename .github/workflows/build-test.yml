@@ -1,0 +1,59 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies (root)
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install dependencies (hyperdeploy)
+        working-directory: hyperdeploy
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build hyperdeploy
+        working-directory: hyperdeploy
+        run: npm run build
+
+      - name: Install dependencies (cdn)
+        working-directory: cdn
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install dependencies (resolver)
+        working-directory: resolver
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install dependencies (registry-sync)
+        working-directory: registry-sync
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Generate artifacts summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
