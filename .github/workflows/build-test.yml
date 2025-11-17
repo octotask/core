@@ -45,11 +45,11 @@ jobs:
 
       - name: Install dependencies (resolver)
         working-directory: resolver
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Install dependencies (registry-sync)
         working-directory: registry-sync
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit
 
       - name: Generate artifacts summary
         if: always()

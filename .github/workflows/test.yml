@@ -32,8 +32,8 @@ jobs:
         run: |
           cd hyperdeploy && npm ci --prefer-offline --no-audit && cd ..
           cd cdn && npm ci --prefer-offline --no-audit && cd ..
-          cd resolver && npm ci --prefer-offline --no-audit && cd ..
-          cd registry-sync && npm ci --prefer-offline --no-audit && cd ..
+          cd resolver && npm install --prefer-offline --no-audit && cd ..
+          cd registry-sync && npm install --prefer-offline --no-audit && cd ..
 
       - name: Run tests
         run: npm run test 2>/dev/null || echo "Tests not yet configured"
