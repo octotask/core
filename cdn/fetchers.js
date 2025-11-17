@@ -11,16 +11,15 @@ const agent = new Agent({
   maxSockets: 100,
   maxFreeSockets: 10,
   timeout: REQUEST_TIMEOUT,
-  freeSocketTimeout: 30000, // 30 seconds
 });
 
 // Configurable CDN base URL
 const JSDELIVR_URL = process.env.CDN_BASE_URL || 'https://cdn.jsdelivr.net/npm';
 const RESOLVED_EXTENSIONS = ['.js', '.json', '/index.js', '/index.json'];
 
-function fetchUrl(url, buffer = false){
+function fetchUrl(url, buffer = false) {
   return request.get(url).agent(agent).buffer(!!buffer).catch(error => {
-    if(error.status === 503 || error.status === 504){
+    if (error.status === 503 || error.status === 504) {
       return fetchUrl(url, !!buffer);
     }
 
@@ -40,31 +39,31 @@ function fetchPackageJson(packageSlug){
   ).then(res => res.body);
 }
 
-function fetchChildDependencies(baseUrl, path, fileList, vendorFiles){
+function fetchChildDependencies(baseUrl, path, fileList, vendorFiles) {
   let resPath, index;
 
   // Try direct path first if there's an extension
-  if(['.js', '.json'].some(ext => _.endsWith(path, ext)) && (index = fileList.indexOf(`/${path}`)) !== -1){
+  if (['.js', '.json'].some(ext => _.endsWith(path, ext)) && (index = fileList.indexOf(`/${path}`)) !== -1) {
     resPath = `/${path}`;
-  } else if(!RESOLVED_EXTENSIONS.some(ext => {
+  } else if (!RESOLVED_EXTENSIONS.some(ext => {
     const potPath = `/${path}${ext}`;
     const i = fileList.indexOf(potPath);
 
-    if(i !== -1){
+    if (i !== -1) {
       resPath = potPath;
       index = i;
       return true;
     }
 
     return false;
-  })){
-    return;
+  })) {
+    return Promise.resolve();
   }
 
   fileList.splice(index, 1);
-  const url = baseUrl + resPath;
+  const url = `${baseUrl}${resPath}`;
 
-  return fetchUrl(url, true).then(({text, status, headers}) => {
+  return fetchUrl(url, true).then(({ text, status, headers }) => {
     vendorFiles[url.replace(JSDELIVR_URL, '')] = text;
 
     const segments = url.replace(baseUrl, '').split('/');
@@ -73,41 +72,40 @@ function fetchChildDependencies(baseUrl, path, fileList, vendorFiles){
     return Promise.all(parseImports(text).map(child => {
       let childPath = normalizePath(`${cwd}${cwd === '' ? '' : '/'}${child}`);
 
-      if(childPath.charAt(0) === '/'){ childPath = childPath.substring(1); }
+      if (childPath.charAt(0) === '/') { childPath = childPath.substring(1); }
 
       return fetchChildDependencies(baseUrl, childPath, fileList, vendorFiles);
-    }))
+    }));
 
   });
 }
 
 // NOTE: Consider merging fetchChildDependencies and fetchChildDefinitions into a single
-// // function to reduce code duplication and improve maintainability
-// function that takes an additional array of extensions to be resolved
-function fetchChildDefinitions(baseUrl, path, fileList, vendorFiles){
+// function to reduce code duplication and improve maintainability
+function fetchChildDefinitions(baseUrl, path, fileList, vendorFiles) {
   let resPath, index;
 
-  if(_.endsWith(path, '.d.ts') && (index = fileList.indexOf(`/${path}`)) !== -1){
+  if (_.endsWith(path, '.d.ts') && (index = fileList.indexOf(`/${path}`)) !== -1) {
     resPath = `/${path}`;
-  } else if(!['.d.ts', '/index.d.ts'].some(ext => {
+  } else if (!['.d.ts', '/index.d.ts'].some(ext => {
     const potPath = `/${path}${ext}`;
     const i = fileList.indexOf(potPath);
 
-    if(i !== -1){
+    if (i !== -1) {
       resPath = potPath;
       index = i;
       return true;
     }
 
     return false;
-  })){
-    return;
+  })) {
+    return Promise.resolve();
   }
 
   fileList.splice(index, 1);
-  const url = baseUrl + resPath;
+  const url = `${baseUrl}${resPath}`;
 
-  return fetchUrl(url, true).then(({text, status, headers}) => {
+  return fetchUrl(url, true).then(({ text, status, headers }) => {
     vendorFiles[url.replace(JSDELIVR_URL, '')] = text;
 
     const segments = url.replace(baseUrl, '').split('/');
@@ -116,7 +114,7 @@ function fetchChildDefinitions(baseUrl, path, fileList, vendorFiles){
     return Promise.all(parseImports(text).map(child => {
       let childPath = normalizePath(`${cwd}${cwd === '' ? '' : '/'}${child}`);
 
-      if(childPath.charAt(0) === '/'){ childPath = childPath.substring(1); }
+      if (childPath.charAt(0) === '/') { childPath = childPath.substring(1); }
 
       return fetchChildDefinitions(baseUrl, childPath, fileList, vendorFiles);
     }));
