@@ -13,11 +13,11 @@ COPY resolver/package*.json ./resolver/
 COPY registry-sync/package*.json ./registry-sync/
 
 # Install dependencies
-RUN npm ci --prefer-offline --no-audit && \
-    cd hyperdeploy && npm ci --prefer-offline --no-audit && cd .. && \
-    cd cdn && npm ci --prefer-offline --no-audit && cd .. && \
-    cd resolver && npm ci --prefer-offline --no-audit && cd .. && \
-    cd registry-sync && npm ci --prefer-offline --no-audit && cd ..
+RUN npm install --prefer-offline --no-audit && \
+    cd hyperdeploy && npm install --prefer-offline --no-audit && cd .. && \
+    cd cdn && npm install --prefer-offline --no-audit && cd .. && \
+    cd resolver && npm install --prefer-offline --no-audit && cd .. && \
+    cd registry-sync && npm install --prefer-offline --no-audit && cd ..
 
 # Copy source files
 COPY . .
@@ -36,7 +36,7 @@ WORKDIR /app
 COPY --from=builder /app/registry-sync /app
 
 # Install only production dependencies
-RUN npm ci --only=production --prefer-offline --no-audit
+RUN npm install --only=production --prefer-offline --no-audit
 
 EXPOSE 6379
 ENV REDIS_URL=redis://redis:6379
@@ -66,11 +66,11 @@ WORKDIR /app
 COPY . .
 
 # Install all dependencies
-RUN npm ci --prefer-offline && \
-    cd hyperdeploy && npm ci --prefer-offline && cd .. && \
-    cd cdn && npm ci --prefer-offline && cd .. && \
-    cd resolver && npm ci --prefer-offline && cd .. && \
-    cd registry-sync && npm ci --prefer-offline && cd ..
+RUN npm install --prefer-offline && \
+    cd hyperdeploy && npm install --prefer-offline && cd .. && \
+    cd cdn && npm install --prefer-offline && cd .. && \
+    cd resolver && npm install --prefer-offline && cd .. && \
+    cd registry-sync && npm install --prefer-offline && cd ..
 
 EXPOSE 3000 8080
 
